@@ -4,7 +4,7 @@ package com.nhnacademy.iot_service.dto;
  * 센서 등록 요청을 처리하기 위한 DTO 클래스입니다.
  * 클라이언트가 서버에 센서를 생성 요청할 때 사용하는 데이터 구조입니다.
  */
-public class SensorCreateRequestDto {
+public class SensorRequest {
     private String sensorName;
     private String sensorType;
     private Boolean sensorStatus;
@@ -14,7 +14,7 @@ public class SensorCreateRequestDto {
      * 기본 생성자입니다.
      * JSON 데이터를 객체로 변환할 때 Jackson 등이 사용합니다.
      */
-    public SensorCreateRequestDto() {}
+    public SensorRequest() {}
 
     /**
      * 모든 필드를 초기화하는 생성자입니다.
@@ -24,7 +24,7 @@ public class SensorCreateRequestDto {
      * @param sensorStatus 센서 상태 (true: 정상, false: 비정상)
      * @param location     센서가 설치된 위치
      */
-    public SensorCreateRequestDto(String sensorName, String sensorType, Boolean sensorStatus, String location) {
+    public SensorRequest(String sensorName, String sensorType, Boolean sensorStatus, String location) {
         this.sensorName = sensorName;
         this.sensorType = sensorType;
         this.sensorStatus = sensorStatus;

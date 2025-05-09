@@ -1,12 +1,12 @@
 package com.nhnacademy.iot_service.dto;
 
-import com.nhnacademy.iot_service.dto.Sensor;
+import com.nhnacademy.iot_service.domain.Sensor;
 
 /**
  * 센서 정보를 클라이언트에 응답할 때 사용하는 DTO 클래스입니다.
  * 서버가 센서 조회 또는 등록 결과를 반환할 때 사용됩니다.
  */
-public class SensorResponseDto {
+public class SensorResponse {
     private Long sensorNo;
     private String sensorName;
     private String sensorType;
@@ -23,7 +23,7 @@ public class SensorResponseDto {
      * @param sensorStatus 센서 상태 (true: 정상, false: 비정상)
      * @param location     센서 설치 위치
      */
-    public SensorResponseDto(Long sensorNo, String sensorName, String sensorType, Boolean sensorStatus, String location) {
+    public SensorResponse(Long sensorNo, String sensorName, String sensorType, Boolean sensorStatus, String location) {
         this.sensorNo = sensorNo;
         this.sensorName = sensorName;
         this.sensorType = sensorType;
@@ -37,8 +37,8 @@ public class SensorResponseDto {
      * @param sensor Sensor 엔티티 객체
      * @return SensorResponseDto 객체
      */
-    public static SensorResponseDto from(Sensor sensor) {
-        return new SensorResponseDto(
+    public static SensorResponse from(Sensor sensor) {
+        return new SensorResponse(
                 sensor.getSensorNo(),
                 sensor.getSensorName(),
                 sensor.getSensorType(),
