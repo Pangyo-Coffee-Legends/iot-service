@@ -2,6 +2,7 @@ package com.nhnacademy.iot_service.dto.engine;
 
 import com.nhnacademy.iot_service.dto.action.ActionResult;
 import com.nhnacademy.iot_service.dto.condition.ConditionResult;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.List;
  * 조건 평가 결과, 실행된 액션, 성공/실패 여부 등 룰 평가와 관련된 모든 정보를 포함합니다.
  * </p>
  */
+@ToString
 public class RuleEvaluationResult {
 
     /**
