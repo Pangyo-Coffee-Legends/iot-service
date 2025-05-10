@@ -40,6 +40,5 @@ jobs:
           username: ${{ secrets.SSH_ID }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          script_stop: true
-          script: "cd ~/iot && ./startup.sh"
+          script: "set -e && cd ~/iot && chmod +x startup.sh && ./startup.sh"
 

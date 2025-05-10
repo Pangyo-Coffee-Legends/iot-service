@@ -5,9 +5,6 @@ package com.nhnacademy.iot_service.domain;
  * true/false 대신 의미 있는 이름으로 상태를 표현할 수 있습니다.
  */
 public enum SensorStatus {
-    ACTIVE,     // 정상 작동 중
-    INACTIVE    // 작동 중지 또는 오류
+    ON,     // 정상 작동 중
+    OFF    // 작동 중지 또는 오류
 }
-
-
-//아직 미사용임

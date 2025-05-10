@@ -1,6 +1,7 @@
 package com.nhnacademy.iot_service.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.Comment;
 
 /**
@@ -8,6 +9,7 @@ import org.hibernate.annotations.Comment;
  * 센서 번호, 이름, 종류, 상태, 설치 장소 정보를 포함합니다.
  */
 @Entity
+@Getter
 @Table(name = "sensors")
 public class Sensor {
 
@@ -21,6 +23,13 @@ public class Sensor {
     @Comment("센서 이름")
     private String sensorName;
 
+    /**
+     * 냉방기: aircon
+     * 제습기: dehumidifier
+     * 난방기: heater
+     * 가습기: humidifier
+     * 환풍기: ventilator
+     */
     @Column(nullable = false, length = 50)
     @Comment("센서 종류")
     private String sensorType;
@@ -42,32 +51,12 @@ public class Sensor {
         this.location = location;
     }
 
-    public Long getSensorNo() {
-        return sensorNo;
+    public void update(String sensorName, String sensorType) {
+        this.sensorName = sensorName;
+        this.sensorType = sensorType;
     }
 
-    public String getSensorName() {
-        return sensorName;
-    }
-
-    public String getSensorType() {
-        return sensorType;
-    }
-
-    public Boolean getSensorStatus() {
-        return sensorStatus;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    /**
-     * 센서 상태를 수정합니다.
-     *
-     * @param sensorStatus true: 정상, false: 비정상
-     */
-    public void setSensorStatus(Boolean sensorStatus) {
+    public void updateState(Boolean sensorStatus) {
         this.sensorStatus = sensorStatus;
     }
 }
