@@ -144,7 +144,7 @@ public class SensorServiceImpl implements SensorService {
                 "sensorName", origin.getSensorName(),
                 "location", origin.getLocation(),
                 "sensorType", origin.getSensorType(),
-                "sensorStatus", origin.getSensorStatus(),
+                "sensorStatus", origin.getSensorState(),
                 "scheduledResults", results // ComfortAdaptor 결과 추가
         );
     }
@@ -186,7 +186,7 @@ public class SensorServiceImpl implements SensorService {
         Map<String, Boolean> deviceStatusMap = sensors.stream()
                 .collect(Collectors.toMap(
                         Sensor::getSensorType,
-                        Sensor::getSensorStatus
+                        Sensor::getSensorState
                 ));
 
         return Map.of(
@@ -239,7 +239,7 @@ public class SensorServiceImpl implements SensorService {
                 sensor.getSensorNo(),
                 sensor.getSensorName(),
                 sensor.getSensorType(),
-                sensor.getSensorStatus(),
+                sensor.getSensorState(),
                 sensor.getLocation()
         );
     }

@@ -15,7 +15,7 @@ public class Sensor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
+    @Column(name = "sensor_no", nullable = false)
     @Comment("센서 번호")
     private Long sensorNo;
 
@@ -36,7 +36,7 @@ public class Sensor {
 
     @Column(nullable = false)
     @Comment("센서 상태")
-    private Boolean sensorStatus;
+    private Boolean sensorState;
 
     @Column(nullable = false, length = 100)
     @Comment("설치 장소")
@@ -44,10 +44,10 @@ public class Sensor {
 
     protected Sensor() {}
 
-    public Sensor(String sensorName, String sensorType, Boolean sensorStatus, String location) {
+    public Sensor(String sensorName, String sensorType, Boolean sensorState, String location) {
         this.sensorName = sensorName;
         this.sensorType = sensorType;
-        this.sensorStatus = sensorStatus;
+        this.sensorState = sensorState;
         this.location = location;
     }
 
@@ -56,7 +56,7 @@ public class Sensor {
         this.sensorType = sensorType;
     }
 
-    public void updateState(Boolean sensorStatus) {
-        this.sensorStatus = sensorStatus;
+    public void updateState(Boolean sensorState) {
+        this.sensorState = sensorState;
     }
 }
