@@ -10,6 +10,7 @@ import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
 import com.nhnacademy.iot_service.exception.SensorNotFoundException;
+import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,6 +43,9 @@ class SensorServiceImplTest {
 
     @InjectMocks
     SensorServiceImpl sensorService;
+
+    @Mock
+    RedisPublisher redisPublisher;
 
     private Sensor aircon;
     private Sensor heater;
@@ -199,51 +204,65 @@ class SensorServiceImplTest {
         when(sensorRepository.findByLocation("회의실"))
                 .thenReturn(List.of(aircon, heater, ventilator));
 
-        // 룰 엔진 결과 세팅
-        Map<String, Object> airconOutput = new HashMap<>();
-        airconOutput.put("aircon", true);
-        Map<String, Object> heaterOutput = new HashMap<>();
-        heaterOutput.put("heater", false);
-        Map<String, Object> ventilatorOutput = new HashMap<>();
-        ventilatorOutput.put("ventilator", true);
+        // 1. RuleEvaluationResult 생성 방식 수정
+        Map<String, Object> airconOutput = Map.of("aircon", true);
+        Map<String, Object> heaterOutput = Map.of("heater", false);
+        Map<String, Object> ventilatorOutput = Map.of("ventilator", true);
 
-        ActionResult airconAction = mock(ActionResult.class);
-        when(airconAction.getOutput()).thenReturn(airconOutput);
-        ActionResult heaterAction = mock(ActionResult.class);
-        when(heaterAction.getOutput()).thenReturn(heaterOutput);
-        ActionResult ventilatorAction = mock(ActionResult.class);
-        when(ventilatorAction.getOutput()).thenReturn(ventilatorOutput);
+        ActionResult airconAction = new ActionResult(
+                1001L, true, "DEVICE_CONTROL",
+                "에어컨 제어 성공", airconOutput, LocalDateTime.now()
+        );
 
-        RuleEvaluationResult rule1 = mock(RuleEvaluationResult.class);
-        when(rule1.getExecutedActions()).thenReturn(List.of(airconAction));
-        RuleEvaluationResult rule2 = mock(RuleEvaluationResult.class);
-        when(rule2.getExecutedActions()).thenReturn(List.of(heaterAction));
-        RuleEvaluationResult rule3 = mock(RuleEvaluationResult.class);
-        when(rule3.getExecutedActions()).thenReturn(List.of(ventilatorAction));
+        ActionResult heaterAction = new ActionResult(
+                1002L, false, "DEVICE_CONTROL",
+                "히터 제어 실패", heaterOutput, LocalDateTime.now()
+        );
 
-        List<RuleEvaluationResult> ruleResults = List.of(rule1, rule2, rule3);
+        ActionResult ventilatorAction = new ActionResult(
+                1003L, true, "DEVICE_CONTROL",
+                "환풍기 제어 성공", ventilatorOutput, LocalDateTime.now()
+        );
+
+        // 3. RuleEvaluationResult Mock 생성 (모든 액션 포함)
+        RuleEvaluationResult ruleResult = mock(RuleEvaluationResult.class);
+        when(ruleResult.getExecutedActions())
+                .thenReturn(List.of(airconAction, heaterAction, ventilatorAction));
 
         when(ruleEngineAdaptor.executeTriggeredRules(
                 eq("LOCATION_ANALYSIS"),
                 anyString(),
-                any()
-        )).thenReturn(ResponseEntity.ok(ruleResults));
+                any(Map.class)
+        )).thenReturn(ResponseEntity.ok(List.of(ruleResult)));
 
+        // When
         List<SensorResult> results = sensorService.getSensorStatusByLocation(sensorNo);
 
-        assertEquals(3, results.size());
+        // Then
+        assertEquals(3, results.size(), "3개의 센서 결과가 반환되어야 함");
 
+        // 4. 센서 타입별 상태 검증
         Map<String, SensorResult> resultMap = new HashMap<>();
-        results.forEach(r -> resultMap.put(r.getSensorName(), r));
+        results.forEach(r -> resultMap.put(r.getSensorName().split(" ")[1], r));
 
-        assertEquals("ON", resultMap.get("회의실 에어컨").getStatus());
-        assertEquals("OFF", resultMap.get("회의실 히터").getStatus());
-        assertEquals("ON", resultMap.get("회의실 환풍기").getStatus());
+        assertAll(
+                () -> assertEquals("ON", resultMap.get("에어컨").getStatus(),
+                        "에어컨은 ON 상태여야 함"),
+                () -> assertEquals("OFF", resultMap.get("히터").getStatus(),
+                        "히터는 OFF 상태여야 함"),
+                () -> assertEquals("ON", resultMap.get("환풍기").getStatus(),
+                        "환풍기는 ON 상태여야 함")
+        );
 
-        // ruleEvaluationResults가 그대로 전달되는지 검증
-        assertEquals(ruleResults, resultMap.get("회의실 에어컨").getRuleResults());
-        assertEquals(ruleResults, resultMap.get("회의실 히터").getRuleResults());
-        assertEquals(ruleResults, resultMap.get("회의실 환풍기").getRuleResults());
+        // 5. Redis 발행 횟수 검증
+        verify(redisPublisher, times(3)).publishSensorData(any(SensorResult.class));
+
+        // 6. 룰 결과 전달 검증
+        results.forEach(r ->
+                assertSame(ruleResult.getExecutedActions(),
+                        r.getRuleResults().get(0).getExecutedActions(),
+                        "모든 센서 결과에 원본 룰 실행 결과가 포함되어야 함")
+        );
     }
 
     @Test

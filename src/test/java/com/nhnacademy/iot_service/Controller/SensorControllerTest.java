@@ -1,75 +1,69 @@
 package com.nhnacademy.iot_service.Controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nhnacademy.iot_service.controller.SensorController;
-import com.nhnacademy.iot_service.domain.Sensor;
-import com.nhnacademy.iot_service.dto.SensorResponse;
+import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
+import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.service.SensorService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(SensorController.class)
+@ExtendWith(MockitoExtension.class)
 class SensorControllerTest {
+    @Mock
+    private SensorService sensorService;
 
-    @Autowired
-    MockMvc mockMvc;
-
-    @MockitoBean
-    SensorService sensorService;
-
-    @Autowired
-    ObjectMapper objectMapper;
+    @InjectMocks
+    private SensorController sensorController;
 
     @Test
-    @DisplayName("GET /api/sensors - 센서 전체 목록 조회")
-    void testGetAllSensors() throws Exception {
-        Sensor sensor = new Sensor("제습센서", "dehumidifier", true, "서버실");
-        SensorResponse dto = SensorResponse.from(sensor);
+    @DisplayName("registerSensor 메서드가 SensorService와 연동되어 정상 동작하는지 테스트")
+    void registerSensor_callsServiceAndReturnsResponse() {
+        SensorRegisterRequest request = mock(SensorRegisterRequest.class);
+        SensorResponse expectedResponse = mock(SensorResponse.class);
 
-        when(sensorService.getAllSensors()).thenReturn(List.of(sensor));
+        when(sensorService.registerSensor(request)).thenReturn(expectedResponse);
 
-        mockMvc.perform(get("/api/sensors"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].sensorName").value("제습센서"))
-                .andExpect(jsonPath("$[0].sensorStatus").value(true));
+        ResponseEntity<SensorResponse> responseEntity = sensorController.registerSensor(request);
+
+        verify(sensorService, times(1)).registerSensor(request);
+        assertEquals(expectedResponse, responseEntity.getBody());
     }
 
     @Test
-    @DisplayName("PATCH /api/sensors/{sensorNo}?status=true - 센서 상태 변경")
-    void testUpdateSensorStatus() throws Exception {
-        Sensor updatedSensor = new Sensor("에어컨센서", "aircon", true, "회의실");
-        updatedSensor.setSensorStatus(true);
+    @DisplayName("getSensor 메서드가 SensorService와 연동되어 정상 동작하는지 테스트")
+    void getSensor_callsServiceAndReturnsResponse() {
+        Long sensorNo = 1L;
+        SensorResponse expectedResponse = mock(SensorResponse.class);
 
-        when(sensorService.updateSensorStatus(1L, true)).thenReturn(updatedSensor);
+        when(sensorService.getSensor(sensorNo)).thenReturn(expectedResponse);
 
-        mockMvc.perform(patch("/api/sensors/1?status=true"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sensorName").value("에어컨센서"))
-                .andExpect(jsonPath("$.sensorStatus").value(true));
+        ResponseEntity<SensorResponse> responseEntity = sensorController.getSensor(sensorNo);
+
+        verify(sensorService, times(1)).getSensor(sensorNo);
+        assertEquals(expectedResponse, responseEntity.getBody());
     }
 
     @Test
-    @DisplayName("POST /api/sensors/process - 센서 처리 요청")
-    void testProcessSensorData() throws Exception {
-        Sensor sensor = new Sensor("온도센서", "temperature", false, "회의실");
+    @DisplayName("getSensors 메서드가 SensorService와 연동되어 정상 동작하는지 테스트")
+    void getSensors_callsServiceAndReturnsResponseList() {
+        String sensorPlace = "회의실";
+        List<SensorResponse> expectedList = List.of(mock(SensorResponse.class), mock(SensorResponse.class));
 
-        mockMvc.perform(post("/api/sensors/process")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(sensor)))
-                .andExpect(status().isOk());
+        when(sensorService.getSensorByLocation(sensorPlace)).thenReturn(expectedList);
 
-        verify(sensorService).processSensorData(any(Sensor.class));
+        ResponseEntity<List<SensorResponse>> responseEntity = sensorController.getSensors(sensorPlace);
+
+        verify(sensorService, times(1)).getSensorByLocation(sensorPlace);
+        assertEquals(expectedList, responseEntity.getBody());
     }
 }

@@ -9,6 +9,7 @@ import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
 import com.nhnacademy.iot_service.exception.SensorNotFoundException;
+import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import com.nhnacademy.iot_service.service.SensorService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class SensorServiceImpl implements SensorService {
     private final SensorRepository sensorRepository;
     private final RuleEngineAdaptor ruleEngineAdaptor;
     private final ComfortAdaptor comfortAdaptor;
+    private final RedisPublisher redisPublisher;
 
     @Override
     public SensorResponse registerSensor(SensorRegisterRequest request) {
@@ -171,7 +173,12 @@ public class SensorServiceImpl implements SensorService {
         Map<String, Boolean> deviceStates = extractDeviceStates(response.getBody());
 
         // 6. 센서별 결과 매핑 (기존 룰 결과 전체 전달)
-        return mapToSensorResults(locationSensors, deviceStates, response.getBody());
+        List<SensorResult> results = mapToSensorResults(locationSensors, deviceStates, response.getBody());
+
+        // 7. Redis로 각 SensorResult 발행 (추가된 부분)
+        results.forEach(redisPublisher::publishSensorData);
+
+        return results;
     }
 
     // 위치 기반 팩트 생성 메서드
