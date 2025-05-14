@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -40,7 +42,8 @@ public class SensorController {
 
     @GetMapping("/place/{sensorPlace}")
     public ResponseEntity<List<SensorResponse>> getSensors(@PathVariable("sensorPlace") String sensorPlace) {
-        List<SensorResponse> responseList = sensorService.getSensorByLocation(sensorPlace);
+        String decodedPlace = URLDecoder.decode(sensorPlace, StandardCharsets.UTF_8);
+        List<SensorResponse> responseList = sensorService.getSensorByLocation(decodedPlace);
         log.debug("getSensors : {}", responseList);
 
         return ResponseEntity.ok(responseList);
