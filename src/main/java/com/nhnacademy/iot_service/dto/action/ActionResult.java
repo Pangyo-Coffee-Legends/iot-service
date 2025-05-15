@@ -1,4 +1,3 @@
-
 package com.nhnacademy.iot_service.dto.action;
 
 import lombok.AllArgsConstructor;
