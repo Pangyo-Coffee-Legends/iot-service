@@ -1,15 +1,12 @@
 package com.nhnacademy.iot_service;
 
-import com.nhnacademy.iot_service.repository.SensorRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.ActiveProfiles;
 
+@ActiveProfiles("test")
 @SpringBootTest
 class IotServiceApplicationTests {
-
-    @MockitoBean
-    SensorRepository sensorRepository;
 
     @Test
     void contextLoads() {
