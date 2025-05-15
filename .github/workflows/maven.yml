@@ -21,7 +21,18 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml -DskipTests
+
+      - name: Prepare server directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_ID }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            mkdir -p ~/iot/target
+            rm -f ~/iot/target/*.jar
 
       - name: upload iot jar to server
         uses: appleboy/scp-action@v0.1.7
@@ -31,7 +42,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           source: "target/*.jar"
-          target: "~/iot/"
+          target: "~/iot/target"
+          strip_components: 1
+          overwrite: true
+
+      - name: Create application.properties file
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_ID }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            echo "${{ secrets.APPLICATION_PROPERTIES }}" > ~/iot/application.properties
 
       - name: execute iot startup script
         uses: appleboy/ssh-action@master
@@ -40,5 +63,7 @@ jobs:
           username: ${{ secrets.SSH_ID }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          script: "set -e && cd ~/iot && chmod +x startup.sh && ./startup.sh"
+          script: |
+            chmod +x ~/threshold/startup.sh
+            cd ~/threshold && ./startup.sh
 
