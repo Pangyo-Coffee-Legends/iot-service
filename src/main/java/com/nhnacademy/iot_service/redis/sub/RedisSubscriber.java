@@ -10,6 +10,7 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
@@ -22,10 +23,18 @@ public class RedisSubscriber implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            SensorResult result = objectMapper.readValue(message.getBody(), SensorResult.class);
+            String rawJson = new String(message.getBody(), StandardCharsets.UTF_8);
+            log.debug("Received message from Redis: {}", rawJson);
+
+            // 1. JSON → SensorResult 역직렬화
+            SensorResult result = objectMapper.readValue(rawJson, SensorResult.class);
+            log.debug("Deserialized SensorResult: {}", result);
+
+            // 2. WebSocket으로 결과 전송
             webSocketController.sendSensorResult(result);
         } catch (IOException e) {
-            log.error("redis subscriber error : ", e);
+            String rawMessage = new String(message.getBody(), StandardCharsets.UTF_8);
+            log.error("Failed to deserialize message: {}", rawMessage, e);
         }
     }
 }
