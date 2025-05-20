@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SensorResponse {
     Long sensorNo;
+    Long roleNo;
     String sensorName;
     String sensorType;
     Boolean sensorStatus;

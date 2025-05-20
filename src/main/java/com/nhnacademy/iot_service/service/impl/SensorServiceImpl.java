@@ -2,14 +2,17 @@ package com.nhnacademy.iot_service.service.impl;
 
 import com.nhnacademy.iot_service.adaptor.ComfortAdaptor;
 import com.nhnacademy.iot_service.adaptor.RuleEngineAdaptor;
+import com.nhnacademy.iot_service.domain.Role;
 import com.nhnacademy.iot_service.domain.Sensor;
 import com.nhnacademy.iot_service.dto.engine.RuleEvaluationResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
+import com.nhnacademy.iot_service.exception.RoleNotFoundException;
 import com.nhnacademy.iot_service.exception.SensorNotFoundException;
 import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
+import com.nhnacademy.iot_service.repository.RoleRepository;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import com.nhnacademy.iot_service.service.SensorService;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +36,15 @@ public class SensorServiceImpl implements SensorService {
     private final RuleEngineAdaptor ruleEngineAdaptor;
     private final ComfortAdaptor comfortAdaptor;
     private final RedisPublisher redisPublisher;
+    private final RoleRepository roleRepository;
 
     @Override
     public SensorResponse registerSensor(SensorRegisterRequest request) {
+        Role role = roleRepository.findById(request.getRoleNo())
+                .orElseThrow(() -> new RoleNotFoundException(request.getRoleNo()));
+
         Sensor sensor = new Sensor(
+                role,
                 request.getSensorName(),
                 request.getSensorType(),
                 request.getSensorStatus(),
@@ -237,6 +245,7 @@ public class SensorServiceImpl implements SensorService {
     private SensorResponse toSensorResponse(Sensor sensor) {
         return new SensorResponse(
                 sensor.getSensorNo(),
+                sensor.getRole().getRoleNo(),
                 sensor.getSensorName(),
                 sensor.getSensorType(),
                 sensor.getSensorState(),

@@ -2,6 +2,7 @@ package com.nhnacademy.iot_service.service.impl;
 
 import com.nhnacademy.iot_service.adaptor.ComfortAdaptor;
 import com.nhnacademy.iot_service.adaptor.RuleEngineAdaptor;
+import com.nhnacademy.iot_service.domain.Role;
 import com.nhnacademy.iot_service.domain.Sensor;
 import com.nhnacademy.iot_service.dto.action.ActionResult;
 import com.nhnacademy.iot_service.dto.engine.RuleEvaluationResult;
@@ -9,8 +10,10 @@ import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
+import com.nhnacademy.iot_service.exception.RoleNotFoundException;
 import com.nhnacademy.iot_service.exception.SensorNotFoundException;
 import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
+import com.nhnacademy.iot_service.repository.RoleRepository;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +24,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -31,6 +35,9 @@ import static org.mockito.Mockito.*;
 
 @ActiveProfiles("test")
 class SensorServiceImplTest {
+
+    @Mock
+    RoleRepository roleRepository;
 
     @Mock
     SensorRepository sensorRepository;
@@ -50,37 +57,91 @@ class SensorServiceImplTest {
     private Sensor aircon;
     private Sensor heater;
     private Sensor ventilator;
-
+    private Role role;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        aircon = new Sensor("회의실 에어컨", "aircon", true, "회의실");
-        heater = new Sensor("회의실 히터", "heater", false, "회의실");
-        ventilator = new Sensor("회의실 환풍기", "ventilator", true, "회의실");
+        role = Role.ofNewRole("ADMIN", "관리자");
+        setField(role, "roleNo", 2L);
+
+        aircon = new Sensor(role, "회의실 에어컨", "aircon", true, "회의실");
+        heater = new Sensor(role, "회의실 히터", "heater", false, "회의실");
+        ventilator = new Sensor(role, "회의실 환풍기", "ventilator", true, "회의실");
+    }
+
+    @Test
+    @DisplayName("센서 등록 시 Role 연관관계가 올바르게 저장됨")
+    void registerSensor_SavesRoleRelationship() {
+        Long roleNo = 10L;
+        Role testRole = Role.ofNewRole("USER", "일반 사용자");
+        setField(testRole, "roleNo", roleNo); // 강제 ID 세팅
+
+        SensorRegisterRequest request = new SensorRegisterRequest(
+                roleNo, "센서A", "aircon", true, "회의실"
+        );
+        Sensor savedSensor = new Sensor(testRole, "센서A", "aircon", true, "회의실");
+
+        when(roleRepository.findById(roleNo)).thenReturn(Optional.of(testRole));
+        when(sensorRepository.save(any(Sensor.class))).thenReturn(savedSensor);
+
+        SensorResponse result = sensorService.registerSensor(request);
+
+        verify(roleRepository).findById(roleNo);
+        verify(sensorRepository).save(any(Sensor.class));
+        assertEquals(roleNo, result.getRoleNo());
+        assertEquals("센서A", result.getSensorName());
+    }
+
+    @Test
+    @DisplayName("센서 등록 시 Role이 없으면 예외 발생")
+    void registerSensor_RoleNotFound_ThrowsException() {
+        Long roleNo = 999L;
+        SensorRegisterRequest request = new SensorRegisterRequest(
+                roleNo, "센서B", "heater", true, "회의실"
+        );
+        when(roleRepository.findById(roleNo)).thenReturn(Optional.empty());
+
+        assertThrows(RoleNotFoundException.class, () -> sensorService.registerSensor(request));
+    }
+
+    @Test
+    @DisplayName("센서 조회 시 Role 정보가 포함됨")
+    void getSensor_ReturnsRoleInfo() {
+        Long sensorNo = 1L;
+        Long roleNo = 10L;
+        Role testRole = Role.ofNewRole("USER", "일반 사용자");
+        setField(testRole, "roleNo", roleNo);
+
+        Sensor sensor = new Sensor(testRole, "센서C", "ventilator", true, "회의실");
+        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.of(sensor));
+
+        SensorResponse result = sensorService.getSensor(sensorNo);
+
+        assertEquals(roleNo, result.getRoleNo());
+        assertEquals("센서C", result.getSensorName());
     }
 
     @Test
     @DisplayName("registerSensor 성공")
     void registerSensor_Success() {
-        // 준비
         SensorRegisterRequest request = new SensorRegisterRequest(
-                "Sensor1", "TypeA", true, "Room1"
+                role.getRoleNo(), "Sensor1", "TypeA", true, "Room1"
         );
         Sensor savedSensor = new Sensor(
+                role,
                 request.getSensorName(),
                 request.getSensorType(),
                 request.getSensorStatus(),
                 request.getLocation()
         );
 
+        when(roleRepository.findById(any())).thenReturn(Optional.ofNullable(role));
         when(sensorRepository.save(any(Sensor.class))).thenReturn(savedSensor);
 
-        // 실행
         SensorResponse result = sensorService.registerSensor(request);
 
-        // 검증
         verify(sensorRepository).save(any(Sensor.class));
         assertEquals("Sensor1", result.getSensorName());
         assertEquals("Room1", result.getLocation());
@@ -93,6 +154,7 @@ class SensorServiceImplTest {
         SensorUpdateRequest request = new SensorUpdateRequest("NewSensor", "TypeB");
 
         Sensor existingSensor = new Sensor(
+                role,
                 "OldSensor",
                 "TypeA",
                 true,
@@ -111,6 +173,25 @@ class SensorServiceImplTest {
     }
 
     @Test
+    @DisplayName("센서 업데이트 시 Role은 변경되지 않는다")
+    void updateSensor_DoesNotChangeRole() {
+        Long sensorNo = 1L;
+        Role originalRole = Role.ofNewRole("ADMIN", "관리자");
+        setField(originalRole, "roleNo", 1L);
+
+        Sensor sensor = new Sensor(originalRole, "센서D", "aircon", true, "회의실");
+        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.of(sensor));
+        when(sensorRepository.save(any(Sensor.class))).thenReturn(sensor);
+
+        SensorUpdateRequest updateRequest = new SensorUpdateRequest("새센서", "heater");
+        SensorResponse result = sensorService.updateSensor(sensorNo, updateRequest);
+
+        assertEquals(1L, result.getRoleNo());
+        assertEquals("새센서", result.getSensorName());
+        assertEquals("heater", result.getSensorType());
+    }
+
+    @Test
     @DisplayName("deleteSensor 성공")
     void deleteSensor_Success() {
         Long sensorNo = 1L;
@@ -119,6 +200,18 @@ class SensorServiceImplTest {
         sensorService.deleteSensor(sensorNo);
 
         verify(sensorRepository).deleteById(sensorNo);
+    }
+
+    @Test
+    @DisplayName("센서 삭제 시 연관 Role은 삭제되지 않는다")
+    void deleteSensor_DoesNotDeleteRole() {
+        Long sensorNo = 1L;
+        when(sensorRepository.existsById(sensorNo)).thenReturn(true);
+
+        sensorService.deleteSensor(sensorNo);
+
+        verify(sensorRepository).deleteById(sensorNo);
+        verifyNoInteractions(roleRepository); // RoleRepository는 호출되지 않아야 함
     }
 
     @Test
@@ -135,6 +228,7 @@ class SensorServiceImplTest {
     void getSensorStatus_Success() {
         Long sensorNo = 1L;
         Sensor sensor = new Sensor(
+                role,
                 "Sensor1",
                 "TypeA",
                 true,
@@ -169,6 +263,7 @@ class SensorServiceImplTest {
     void getSensorStatus_EmptyRuleResults() {
         Long sensorNo = 1L;
         Sensor sensor = new Sensor(
+                role,
                 "empty",
                 "type",
                 true,
@@ -285,5 +380,15 @@ class SensorServiceImplTest {
 
         assertThrows(SensorNotFoundException.class, () ->
                 sensorService.getSensorStatusByLocation(sensorNo));
+    }
+
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
