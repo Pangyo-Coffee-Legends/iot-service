@@ -3,7 +3,6 @@ package com.nhnacademy.iot_service.adaptor;
 import com.nhnacademy.iot_service.dto.action.ActionResult;
 import com.nhnacademy.iot_service.dto.condition.ConditionResult;
 import com.nhnacademy.iot_service.dto.engine.RuleEvaluationResult;
-import lombok.extern.slf4j.Slf4j;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -15,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Slf4j
+@ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
