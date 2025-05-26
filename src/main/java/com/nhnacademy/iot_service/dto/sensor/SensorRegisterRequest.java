@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SensorRegisterRequest {
-    Long roleNo;
     String sensorName;
     String sensorType;
     Boolean sensorStatus;

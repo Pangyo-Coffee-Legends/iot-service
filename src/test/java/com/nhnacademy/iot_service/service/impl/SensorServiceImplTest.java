@@ -1,19 +1,23 @@
 package com.nhnacademy.iot_service.service.impl;
 
 import com.nhnacademy.iot_service.adaptor.ComfortAdaptor;
+import com.nhnacademy.iot_service.adaptor.MemberAdaptor;
 import com.nhnacademy.iot_service.adaptor.RuleEngineAdaptor;
+import com.nhnacademy.iot_service.auth.MemberThreadLocal;
 import com.nhnacademy.iot_service.domain.Role;
 import com.nhnacademy.iot_service.domain.Sensor;
+import com.nhnacademy.iot_service.domain.SensorMemberMapping;
 import com.nhnacademy.iot_service.dto.action.ActionResult;
 import com.nhnacademy.iot_service.dto.engine.RuleEvaluationResult;
+import com.nhnacademy.iot_service.dto.member.MemberResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
-import com.nhnacademy.iot_service.exception.RoleNotFoundException;
-import com.nhnacademy.iot_service.exception.SensorNotFoundException;
+import com.nhnacademy.iot_service.exception.*;
 import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.repository.RoleRepository;
+import com.nhnacademy.iot_service.repository.SensorMbMappingRepository;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +28,6 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -40,7 +43,13 @@ class SensorServiceImplTest {
     RoleRepository roleRepository;
 
     @Mock
+    SensorMbMappingRepository mbMappingRepository;
+
+    @Mock
     SensorRepository sensorRepository;
+
+    @Mock
+    MemberAdaptor memberAdaptor;
 
     @Mock
     RuleEngineAdaptor ruleEngineAdaptor;
@@ -57,170 +66,240 @@ class SensorServiceImplTest {
     private Sensor aircon;
     private Sensor heater;
     private Sensor ventilator;
-    private Role role;
+
+    private String testEmail = "test@example.com";
+    private Long testMemberNo = 1L;
+    private Long testSensorNo = 100L;
+    private String testLocation = "Office";
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        role = Role.ofNewRole("ADMIN", "관리자");
-        setField(role, "roleNo", 2L);
-
-        aircon = new Sensor(role, "회의실 에어컨", "aircon", true, "회의실");
-        heater = new Sensor(role, "회의실 히터", "heater", false, "회의실");
-        ventilator = new Sensor(role, "회의실 환풍기", "ventilator", true, "회의실");
+        aircon = new Sensor("회의실 에어컨", "aircon", true, "회의실");
+        heater = new Sensor("회의실 히터", "heater", false, "회의실");
+        ventilator = new Sensor("회의실 환풍기", "ventilator", true, "회의실");
     }
 
     @Test
-    @DisplayName("센서 등록 시 Role 연관관계가 올바르게 저장됨")
-    void registerSensor_SavesRoleRelationship() {
-        Long roleNo = 10L;
-        Role testRole = Role.ofNewRole("USER", "일반 사용자");
-        setField(testRole, "roleNo", roleNo); // 강제 ID 세팅
+    @DisplayName("센서 등록 성공")
+    void registerSensor_Success() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        SensorRegisterRequest request = new SensorRegisterRequest(
-                roleNo, "센서A", "aircon", true, "회의실"
-        );
-        Sensor savedSensor = new Sensor(testRole, "센서A", "aircon", true, "회의실");
+        SensorRegisterRequest request = new SensorRegisterRequest("센서A", "aircon", true, "회의실");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        Role role = Role.ofNewRole("ROLE_ADMIN", "관리자 입니다.");
+        Sensor sensor = new Sensor("센서A", "aircon", true, "회의실");
 
-        when(roleRepository.findById(roleNo)).thenReturn(Optional.of(testRole));
-        when(sensorRepository.save(any(Sensor.class))).thenReturn(savedSensor);
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(roleRepository.findByRoleName("ROLE_ADMIN")).thenReturn(Optional.of(role));
+        when(sensorRepository.save(any(Sensor.class))).thenReturn(sensor);
 
-        SensorResponse result = sensorService.registerSensor(request);
+        SensorResponse response = sensorService.registerSensor(request);
 
-        verify(roleRepository).findById(roleNo);
-        verify(sensorRepository).save(any(Sensor.class));
-        assertEquals(roleNo, result.getRoleNo());
-        assertEquals("센서A", result.getSensorName());
+        assertNotNull(response);
+        assertEquals("센서A", response.getSensorName());
+        verify(mbMappingRepository, times(1)).save(any(SensorMemberMapping.class));
     }
 
     @Test
-    @DisplayName("센서 등록 시 Role이 없으면 예외 발생")
-    void registerSensor_RoleNotFound_ThrowsException() {
-        Long roleNo = 999L;
-        SensorRegisterRequest request = new SensorRegisterRequest(
-                roleNo, "센서B", "heater", true, "회의실"
-        );
-        when(roleRepository.findById(roleNo)).thenReturn(Optional.empty());
+    @DisplayName("registerSensor 실패 - 회원 없음")
+    void registerSensor_memberNotFound() {
+        SensorRegisterRequest request = new SensorRegisterRequest("센서A", "aircon", true, "회의실");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(null);
+
+        assertThrows(MemberNotFoundException.class, () -> sensorService.registerSensor(request));
+    }
+
+    @Test
+    @DisplayName("registerSensor 실패 - Role 없음")
+    void registerSensor_roleNotFound() {
+        MemberThreadLocal.setMemberEmail(testEmail);
+
+        SensorRegisterRequest request = new SensorRegisterRequest("센서A", "aircon", true, "회의실");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(roleRepository.findByRoleName("ROLE_ADMIN")).thenReturn(java.util.Optional.empty());
 
         assertThrows(RoleNotFoundException.class, () -> sensorService.registerSensor(request));
     }
 
     @Test
-    @DisplayName("센서 조회 시 Role 정보가 포함됨")
-    void getSensor_ReturnsRoleInfo() {
-        Long sensorNo = 1L;
-        Long roleNo = 10L;
-        Role testRole = Role.ofNewRole("USER", "일반 사용자");
-        setField(testRole, "roleNo", roleNo);
+    @DisplayName("registerSensor 실패 - 권한 불일치")
+    void registerSensor_accessDenied() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        Sensor sensor = new Sensor(testRole, "센서C", "ventilator", true, "회의실");
-        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.of(sensor));
+        SensorRegisterRequest request = new SensorRegisterRequest("센서A", "aircon", true, "회의실");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_USER","user", testEmail, "abcd1234!", "010-1234-5678");
+        Role role = Role.ofNewRole("ROLE_USER", "사용자 입니다.");
 
-        SensorResponse result = sensorService.getSensor(sensorNo);
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(roleRepository.findByRoleName("ROLE_USER")).thenReturn(java.util.Optional.of(role));
 
-        assertEquals(roleNo, result.getRoleNo());
-        assertEquals("센서C", result.getSensorName());
+        assertThrows(AccessDeniedException.class, () -> sensorService.registerSensor(request));
     }
 
     @Test
-    @DisplayName("registerSensor 성공")
-    void registerSensor_Success() {
-        SensorRegisterRequest request = new SensorRegisterRequest(
-                role.getRoleNo(), "Sensor1", "TypeA", true, "Room1"
-        );
-        Sensor savedSensor = new Sensor(
-                role,
-                request.getSensorName(),
-                request.getSensorType(),
-                request.getSensorStatus(),
-                request.getLocation()
-        );
+    @DisplayName("registerSensor 실패 - 센서-멤버 매핑 저장 실패")
+    void registerSensor_sensorMappingFail() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        when(roleRepository.findById(any())).thenReturn(Optional.ofNullable(role));
-        when(sensorRepository.save(any(Sensor.class))).thenReturn(savedSensor);
+        SensorRegisterRequest request = new SensorRegisterRequest("센서A", "aircon", true, "회의실");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        Role role = Role.ofNewRole("ROLE_ADMIN", "관리자 입니다.");
+        Sensor sensor = new Sensor("센서A", "aircon", true, "회의실");
 
-        SensorResponse result = sensorService.registerSensor(request);
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(roleRepository.findByRoleName("ROLE_ADMIN")).thenReturn(Optional.of(role));
+        when(sensorRepository.save(any(Sensor.class))).thenReturn(sensor);
+        doThrow(new org.springframework.dao.DataAccessException("fail"){}).when(mbMappingRepository).save(any(SensorMemberMapping.class));
 
-        verify(sensorRepository).save(any(Sensor.class));
-        assertEquals("Sensor1", result.getSensorName());
-        assertEquals("Room1", result.getLocation());
+        assertThrows(SensorPersistException.class, () -> sensorService.registerSensor(request));
     }
 
     @Test
     @DisplayName("updateSensor 성공")
-    void updateSensor_Success() {
-        Long sensorNo = 1L;
-        SensorUpdateRequest request = new SensorUpdateRequest("NewSensor", "TypeB");
+    void updateSensor_success() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        Sensor existingSensor = new Sensor(
-                role,
-                "OldSensor",
-                "TypeA",
-                true,
-                "A class"
-        );
+        SensorUpdateRequest request = new SensorUpdateRequest("NewName", "NewType");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        Sensor sensor = new Sensor("OldName", "OldType", true, "회의실");
 
-        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.of(existingSensor));
-        when(sensorRepository.save(any(Sensor.class))).thenReturn(existingSensor);
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.findById(testSensorNo)).thenReturn(java.util.Optional.of(sensor));
+        when(sensorRepository.save(any(Sensor.class))).thenReturn(sensor);
 
-        SensorResponse result = sensorService.updateSensor(sensorNo, request);
+        SensorResponse response = sensorService.updateSensor(testSensorNo, request);
 
-        verify(sensorRepository).findById(sensorNo);
-        verify(sensorRepository).save(any(Sensor.class));
-        assertEquals("NewSensor", result.getSensorName());
-        assertEquals("TypeB", result.getSensorType());
+        assertNotNull(response);
+        assertEquals("NewName", response.getSensorName());
+        assertEquals("NewType", response.getSensorType());
+        verify(sensorRepository).save(sensor);
     }
 
     @Test
-    @DisplayName("센서 업데이트 시 Role은 변경되지 않는다")
-    void updateSensor_DoesNotChangeRole() {
-        Long sensorNo = 1L;
-        Role originalRole = Role.ofNewRole("ADMIN", "관리자");
-        setField(originalRole, "roleNo", 1L);
+    @DisplayName("updateSensor 실패 - 회원 없음")
+    void updateSensor_memberNotFound() {
+        SensorUpdateRequest request = new SensorUpdateRequest("NewName", "NewType");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(null);
 
-        Sensor sensor = new Sensor(originalRole, "센서D", "aircon", true, "회의실");
-        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.of(sensor));
-        when(sensorRepository.save(any(Sensor.class))).thenReturn(sensor);
+        assertThrows(MemberNotFoundException.class, () -> sensorService.updateSensor(testSensorNo, request));
+    }
 
-        SensorUpdateRequest updateRequest = new SensorUpdateRequest("새센서", "heater");
-        SensorResponse result = sensorService.updateSensor(sensorNo, updateRequest);
+    @Test
+    @DisplayName("updateSensor 실패 - 센서 없음")
+    void updateSensor_sensorNotFound() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        assertEquals(1L, result.getRoleNo());
-        assertEquals("새센서", result.getSensorName());
-        assertEquals("heater", result.getSensorType());
+        SensorUpdateRequest request = new SensorUpdateRequest("NewName", "NewType");
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.findById(testSensorNo)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(SensorNotFoundException.class, () -> sensorService.updateSensor(testSensorNo, request));
     }
 
     @Test
     @DisplayName("deleteSensor 성공")
-    void deleteSensor_Success() {
-        Long sensorNo = 1L;
-        when(sensorRepository.existsById(sensorNo)).thenReturn(true);
+    void deleteSensor_success() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        sensorService.deleteSensor(sensorNo);
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.existsById(testSensorNo)).thenReturn(true);
 
-        verify(sensorRepository).deleteById(sensorNo);
+        assertDoesNotThrow(() -> sensorService.deleteSensor(testSensorNo));
+
+        verify(sensorRepository).deleteById(testSensorNo);
     }
 
     @Test
-    @DisplayName("센서 삭제 시 연관 Role은 삭제되지 않는다")
-    void deleteSensor_DoesNotDeleteRole() {
-        Long sensorNo = 1L;
-        when(sensorRepository.existsById(sensorNo)).thenReturn(true);
+    @DisplayName("deleteSensor 실패 - 회원 없음")
+    void deleteSensor_memberNotFound() {
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(null);
 
-        sensorService.deleteSensor(sensorNo);
-
-        verify(sensorRepository).deleteById(sensorNo);
-        verifyNoInteractions(roleRepository); // RoleRepository는 호출되지 않아야 함
+        assertThrows(MemberNotFoundException.class, () -> sensorService.deleteSensor(testSensorNo));
     }
 
     @Test
-    @DisplayName("deleteSensor - sensor not found")
-    void deleteSensor_NotFound() {
-        Long sensorNo = 1L;
-        when(sensorRepository.existsById(sensorNo)).thenReturn(false);
+    @DisplayName("deleteSensor 실패 - 센서 없음")
+    void deleteSensor_sensorNotFound() {
+        MemberThreadLocal.setMemberEmail(testEmail);
 
-        assertThrows(SensorNotFoundException.class, () -> sensorService.deleteSensor(sensorNo));
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.existsById(testSensorNo)).thenReturn(false);
+
+        assertThrows(SensorNotFoundException.class, () -> sensorService.deleteSensor(testSensorNo));
+    }
+
+    @Test
+    @DisplayName("getSensor 성공")
+    void getSensor_success() {
+        MemberThreadLocal.setMemberEmail(testEmail);
+
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        Sensor sensor = new Sensor("센서A", "aircon", true, "회의실");
+
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.findById(testSensorNo)).thenReturn(java.util.Optional.of(sensor));
+
+        SensorResponse response = sensorService.getSensor(testSensorNo);
+
+        assertNotNull(response);
+        assertEquals("센서A", response.getSensorName());
+    }
+
+    @Test
+    @DisplayName("getSensor 실패 - 회원 없음")
+    void getSensor_memberNotFound() {
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(null);
+
+        assertThrows(MemberNotFoundException.class, () -> sensorService.getSensor(testSensorNo));
+    }
+
+    @Test
+    @DisplayName("getSensor 실패 - 센서 없음")
+    void getSensor_sensorNotFound() {
+        MemberThreadLocal.setMemberEmail(testEmail);
+
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.findById(testSensorNo)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(SensorNotFoundException.class, () -> sensorService.getSensor(testSensorNo));
+    }
+
+    @Test
+    @DisplayName("getSensorByLocation 성공")
+    void getSensorByLocation_success() {
+        MemberThreadLocal.setMemberEmail(testEmail);
+
+        MemberResponse memberResponse = new MemberResponse(testMemberNo, "ROLE_ADMIN","user", testEmail, "abcd1234!", "010-1234-5678");
+        List<Sensor> sensors = List.of(
+                new Sensor("센서A", "aircon", true, testLocation),
+                new Sensor("센서B", "heater", false, testLocation)
+        );
+
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(ResponseEntity.ok(memberResponse));
+        when(sensorRepository.findByLocation(testLocation)).thenReturn(sensors);
+
+        List<SensorResponse> responses = sensorService.getSensorByLocation(testLocation);
+
+        assertNotNull(responses);
+        assertEquals(2, responses.size());
+        assertEquals("센서A", responses.get(0).getSensorName());
+        assertEquals("센서B", responses.get(1).getSensorName());
+    }
+
+    @Test
+    @DisplayName("getSensorByLocation 실패 - 회원 없음")
+    void getSensorByLocation_memberNotFound() {
+        when(memberAdaptor.getMemberByEmail(testEmail)).thenReturn(null);
+
+        assertThrows(MemberNotFoundException.class, () -> sensorService.getSensorByLocation(testLocation));
     }
 
     @Test
@@ -228,7 +307,6 @@ class SensorServiceImplTest {
     void getSensorStatus_Success() {
         Long sensorNo = 1L;
         Sensor sensor = new Sensor(
-                role,
                 "Sensor1",
                 "TypeA",
                 true,
@@ -259,11 +337,10 @@ class SensorServiceImplTest {
     }
 
     @Test
-    @DisplayName("getSensorStatus - results 가 비어있을 때")
+    @DisplayName("getSensorStatus - results 가 비어 있을 때")
     void getSensorStatus_EmptyRuleResults() {
         Long sensorNo = 1L;
         Sensor sensor = new Sensor(
-                role,
                 "empty",
                 "type",
                 true,
@@ -280,15 +357,6 @@ class SensorServiceImplTest {
         // 검증: 결과가 null 인 경우 "off" 상태
         assertEquals("off", result.getStatus());
         assertNull(result.getRuleResults());
-    }
-
-    @Test
-    @DisplayName("센서를 찾을 수 없습니다.")
-    void getSensor_NotFound() {
-        Long sensorNo = 1L;
-        when(sensorRepository.findById(sensorNo)).thenReturn(Optional.empty());
-
-        assertThrows(SensorNotFoundException.class, () -> sensorService.getSensor(sensorNo));
     }
 
     @Test
@@ -380,15 +448,5 @@ class SensorServiceImplTest {
 
         assertThrows(SensorNotFoundException.class, () ->
                 sensorService.getSensorStatusByLocation(sensorNo));
-    }
-
-    private void setField(Object target, String fieldName, Object value) {
-        try {
-            Field field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

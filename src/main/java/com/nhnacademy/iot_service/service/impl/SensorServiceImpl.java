@@ -1,22 +1,27 @@
 package com.nhnacademy.iot_service.service.impl;
 
 import com.nhnacademy.iot_service.adaptor.ComfortAdaptor;
+import com.nhnacademy.iot_service.adaptor.MemberAdaptor;
 import com.nhnacademy.iot_service.adaptor.RuleEngineAdaptor;
+import com.nhnacademy.iot_service.auth.MemberThreadLocal;
 import com.nhnacademy.iot_service.domain.Role;
 import com.nhnacademy.iot_service.domain.Sensor;
+import com.nhnacademy.iot_service.domain.SensorMemberMapping;
 import com.nhnacademy.iot_service.dto.engine.RuleEvaluationResult;
+import com.nhnacademy.iot_service.dto.member.MemberResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
 import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
-import com.nhnacademy.iot_service.exception.RoleNotFoundException;
-import com.nhnacademy.iot_service.exception.SensorNotFoundException;
+import com.nhnacademy.iot_service.exception.*;
 import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.repository.RoleRepository;
+import com.nhnacademy.iot_service.repository.SensorMbMappingRepository;
 import com.nhnacademy.iot_service.repository.SensorRepository;
 import com.nhnacademy.iot_service.service.SensorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,28 +42,65 @@ public class SensorServiceImpl implements SensorService {
     private final ComfortAdaptor comfortAdaptor;
     private final RedisPublisher redisPublisher;
     private final RoleRepository roleRepository;
+    private final MemberAdaptor memberAdaptor;
+    private final SensorMbMappingRepository mbMappingRepository;
 
     @Override
     public SensorResponse registerSensor(SensorRegisterRequest request) {
-        Role role = roleRepository.findById(request.getRoleNo())
-                .orElseThrow(() -> new RoleNotFoundException(request.getRoleNo()));
+        String email = MemberThreadLocal.getMemberEmail();
 
-        Sensor sensor = new Sensor(
-                role,
-                request.getSensorName(),
-                request.getSensorType(),
-                request.getSensorStatus(),
-                request.getLocation()
+        ResponseEntity<MemberResponse> response = memberAdaptor.getMemberByEmail(email);
+
+        if (response == null || response.getBody() == null) {
+            log.error("register sensor member not found");
+            throw new MemberNotFoundException(email);
+        }
+
+        String roleName = response.getBody().getRoleName();
+
+        Role role = roleRepository.findByRoleName(roleName)
+                .orElseThrow(() -> new RoleNotFoundException(roleName));
+
+        if (!role.getRoleName().equals("ROLE_ADMIN")) {
+            log.error("권한이 맞지 않습니다.");
+            throw new AccessDeniedException("관리자 권한이 필요합니다.");
+        }
+
+        Sensor sensor = sensorRepository.save(
+                new Sensor (
+                        request.getSensorName(),
+                        request.getSensorType(),
+                        request.getSensorStatus(),
+                        request.getLocation()
+                )
         );
 
-        Sensor save = sensorRepository.save(sensor);
-        log.debug("sensor register : {}", save);
+        try {
+            mbMappingRepository.save(
+                    SensorMemberMapping.ofNewSensorMemberMapping(
+                            sensor,
+                            response.getBody().getNo()
+                    )
+            );
+        } catch (DataAccessException e) {
+            log.error("register sensor mapping failed");
+            throw new SensorPersistException("sensor member mapping failed : " + e);
+        }
 
-        return toSensorResponse(save);
+        return toSensorResponse(sensor);
     }
 
     @Override
     public SensorResponse updateSensor(Long sensorNo, SensorUpdateRequest request) {
+        String email = MemberThreadLocal.getMemberEmail();
+
+        ResponseEntity<MemberResponse> response = memberAdaptor.getMemberByEmail(email);
+
+        if (response == null || response.getBody() == null) {
+            log.error("update sensor member not found");
+            throw new MemberNotFoundException(email);
+        }
+
         Sensor sensor = sensorRepository.findById(sensorNo)
                 .orElseThrow(() -> new SensorNotFoundException(sensorNo));
 
@@ -75,6 +117,15 @@ public class SensorServiceImpl implements SensorService {
 
     @Override
     public void deleteSensor(Long sensorNo) {
+        String email = MemberThreadLocal.getMemberEmail();
+
+        ResponseEntity<MemberResponse> response = memberAdaptor.getMemberByEmail(email);
+
+        if (response == null || response.getBody() == null) {
+            log.error("delete sensor member not found");
+            throw new MemberNotFoundException(email);
+        }
+
         if (!sensorRepository.existsById(sensorNo)) {
             log.error("sensor no Not Found : {}", sensorNo);
             throw new SensorNotFoundException(sensorNo);
@@ -86,7 +137,14 @@ public class SensorServiceImpl implements SensorService {
 
     @Override
     public SensorResponse getSensor(Long sensorNo) {
-        log.debug("getSensor start");
+        String email = MemberThreadLocal.getMemberEmail();
+
+        ResponseEntity<MemberResponse> response = memberAdaptor.getMemberByEmail(email);
+
+        if (response == null || response.getBody() == null) {
+            log.error("get sensor member not found");
+            throw new MemberNotFoundException(email);
+        }
 
         return sensorRepository.findById(sensorNo)
                 .map(this::toSensorResponse)
@@ -95,6 +153,15 @@ public class SensorServiceImpl implements SensorService {
 
     @Override
     public List<SensorResponse> getSensorByLocation(String location) {
+        String email = MemberThreadLocal.getMemberEmail();
+
+        ResponseEntity<MemberResponse> response = memberAdaptor.getMemberByEmail(email);
+
+        if (response == null || response.getBody() == null) {
+            log.error("get sensor by location member not found");
+            throw new MemberNotFoundException(email);
+        }
+
         List<Sensor> sensorList = sensorRepository.findByLocation(location);
 
         return sensorList.stream()
@@ -245,7 +312,6 @@ public class SensorServiceImpl implements SensorService {
     private SensorResponse toSensorResponse(Sensor sensor) {
         return new SensorResponse(
                 sensor.getSensorNo(),
-                sensor.getRole().getRoleNo(),
                 sensor.getSensorName(),
                 sensor.getSensorType(),
                 sensor.getSensorState(),

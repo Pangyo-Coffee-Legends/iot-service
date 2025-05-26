@@ -19,10 +19,6 @@ public class Sensor {
     @Comment("센서 번호")
     private Long sensorNo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_no", referencedColumnName = "role_no")
-    private Role role;
-
     @Column(nullable = false, length = 50)
     @Comment("센서 이름")
     private String sensorName;
@@ -48,8 +44,7 @@ public class Sensor {
 
     protected Sensor() {}
 
-    public Sensor(Role role, String sensorName, String sensorType, Boolean sensorState, String location) {
-        this.role = role;
+    public Sensor(String sensorName, String sensorType, Boolean sensorState, String location) {
         this.sensorName = sensorName;
         this.sensorType = sensorType;
         this.sensorState = sensorState;
