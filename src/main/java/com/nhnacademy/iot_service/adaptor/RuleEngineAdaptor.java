@@ -14,7 +14,6 @@ import java.util.Map;
 
 @FeignClient(
         name = "rule-engine-service",
-        contextId = "rule-engine",
         url = "${rule-engine-service.url}",
         path = "/api/v1/rule-engine"
 )
