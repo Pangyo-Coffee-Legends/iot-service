@@ -2,9 +2,9 @@ name: IoT CI/CD with Maven
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -45,16 +45,6 @@ jobs:
           target: "~/iot/target"
           strip_components: 1
           overwrite: true
-
-      - name: Create application.properties file
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_IP }}
-          username: ${{ secrets.SSH_ID }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            echo "${{ secrets.APPLICATION_PROPERTIES }}" > ~/iot/application.properties
 
       - name: execute iot startup script
         uses: appleboy/ssh-action@master
