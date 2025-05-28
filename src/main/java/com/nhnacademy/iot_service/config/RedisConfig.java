@@ -6,7 +6,6 @@ import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -29,18 +28,6 @@ public class RedisConfig {
     @Bean
     public ChannelTopic sensorTopic() {
         return new ChannelTopic("sensor-service"); // 원하는 채널명으로 지정
-    }
-
-    /**
-     * Redis 연결 팩토리를 생성합니다.
-     * 기본 로컬호스트(127.0.0.1)와 포트(6379)를 사용하여 연결을 설정합니다.
-     *
-     * @return Lettuce 기반 Redis 연결 팩토리
-     * @see LettuceConnectionFactory
-     */
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory();
     }
 
     @Bean
@@ -68,9 +55,9 @@ public class RedisConfig {
      * @see JavaTimeModule
      */
     @Bean
-    public RedisTemplate<String, Object> redisTemplate() {
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
+        template.setConnectionFactory(connectionFactory);
 
         // Java LocalDateTime Add
         ObjectMapper objectMapper = new ObjectMapper();
