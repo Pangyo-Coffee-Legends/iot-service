@@ -6,6 +6,7 @@ import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -40,6 +41,12 @@ public class RedisConfig {
         container.addMessageListener(redisSubscriber, sensorTopic); // 이 라인이 핵심!
         return container;
     }
+
+    @Bean
+    public RedisConnectionFactory redisConnectionFactory() {
+        return new LettuceConnectionFactory("localhost", 6379);
+    }
+
 
     /**
      * Redis 데이터 접근을 위한 템플릿을 구성합니다.<br>
