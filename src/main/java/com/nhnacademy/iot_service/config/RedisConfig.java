@@ -3,6 +3,8 @@ package com.nhnacademy.iot_service.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * Redis 관련 설정을 정의하는 구성 클래스입니다.
  * Redis 연결 팩토리, 템플릿, Pub/Sub 채널 토픽 등을 설정합니다.
  */
+@Slf4j
 @Configuration
 public class RedisConfig {
 
@@ -65,6 +68,14 @@ public class RedisConfig {
         config.setPassword(RedisPassword.of(redisPassword));  // 꼭 RedisPassword.of() 사용
         config.setDatabase(redisDatabase);
         return new LettuceConnectionFactory(config);
+    }
+
+    @PostConstruct
+    public void checkRedisConfig() {
+        log.info("Redis Host: {}", redisHost);
+        log.info("Redis Port: {}", redisPort);
+        log.info("Redis Password: {}", redisPassword);
+        log.info("Redis Database: {}", redisDatabase);
     }
 
     /**
