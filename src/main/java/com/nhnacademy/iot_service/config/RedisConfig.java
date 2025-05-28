@@ -6,6 +6,7 @@ import com.nhnacademy.iot_service.properties.RedisProperties;
 import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -24,6 +25,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 @Slf4j
 @Configuration
+@EnableConfigurationProperties(RedisProperties.class)
 public class RedisConfig {
 
     private final RedisProperties redisProperties;
