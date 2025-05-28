@@ -2,10 +2,10 @@ package com.nhnacademy.iot_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.nhnacademy.iot_service.properties.RedisProperties;
 import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -26,17 +26,19 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
+    private final RedisProperties redisProperties;
 
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
+    public RedisConfig(RedisProperties redisProperties) {
+        this.redisProperties = redisProperties;
+    }
 
-    @Value("${spring.data.redis.password}")
-    private String redisPassword;
-
-    @Value("${spring.data.redis.database}")
-    private int redisDatabase;
+    @PostConstruct
+    public void checkRedisConfig() {
+        log.info("Redis Host: {}", redisProperties.getHost());
+        log.info("Redis Port: {}", redisProperties.getPort());
+        log.info("Redis Password: {}", redisProperties.getPassword());
+        log.info("Redis Database: {}", redisProperties.getDatabase());
+    }
 
     /**
      * Redis Pub/Sub 채널 토픽을 생성합니다.
@@ -50,6 +52,16 @@ public class RedisConfig {
     }
 
     @Bean
+    public RedisConnectionFactory redisConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisProperties.getHost());
+        config.setPort(redisProperties.getPort());
+        config.setPassword(RedisPassword.of(redisProperties.getPassword()));  // 꼭 RedisPassword.of() 사용
+        config.setDatabase(redisProperties.getDatabase());
+        return new LettuceConnectionFactory(config);
+    }
+
+    @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             RedisSubscriber redisSubscriber,
@@ -58,24 +70,6 @@ public class RedisConfig {
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(redisSubscriber, sensorTopic); // 이 라인이 핵심!
         return container;
-    }
-
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redisHost);
-        config.setPort(redisPort);
-        config.setPassword(RedisPassword.of(redisPassword));  // 꼭 RedisPassword.of() 사용
-        config.setDatabase(redisDatabase);
-        return new LettuceConnectionFactory(config);
-    }
-
-    @PostConstruct
-    public void checkRedisConfig() {
-        log.info("Redis Host: {}", redisHost);
-        log.info("Redis Port: {}", redisPort);
-        log.info("Redis Password: {}", redisPassword);
-        log.info("Redis Database: {}", redisDatabase);
     }
 
     /**
