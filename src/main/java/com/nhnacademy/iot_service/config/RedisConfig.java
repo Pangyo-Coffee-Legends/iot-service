@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nhnacademy.iot_service.properties.RedisProperties;
 import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -34,14 +33,6 @@ public class RedisConfig {
         this.redisProperties = redisProperties;
     }
 
-    @PostConstruct
-    public void checkRedisConfig() {
-        log.info("Redis Host: {}", redisProperties.getHost());
-        log.info("Redis Port: {}", redisProperties.getPort());
-        log.info("Redis Password: {}", redisProperties.getPassword());
-        log.info("Redis Database: {}", redisProperties.getDatabase());
-    }
-
     /**
      * Redis Pub/Sub 채널 토픽을 생성합니다.
      *
@@ -53,6 +44,15 @@ public class RedisConfig {
         return new ChannelTopic("sensor-service"); // 원하는 채널명으로 지정
     }
 
+    /**
+     * Redis 연결 팩토리 빈을 생성합니다.
+     * <p>
+     * RedisStandaloneConfiguration을 사용하여 Redis 서버의 호스트, 포트, 비밀번호, 데이터베이스를 설정하고,
+     * LettuceConnectionFactory를 반환합니다.
+     * </p>
+     *
+     * @return LettuceConnectionFactory Redis 연결을 관리하는 팩토리 객체
+     */
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
@@ -63,6 +63,18 @@ public class RedisConfig {
         return new LettuceConnectionFactory(config);
     }
 
+    /**
+     * Redis 메시지 리스너 컨테이너 빈을 생성합니다.
+     * <p>
+     * 주어진 RedisConnectionFactory, RedisSubscriber, ChannelTopic을 사용하여
+     * RedisMessageListenerContainer를 구성하고, 지정된 토픽에 대한 메시지 리스너를 등록합니다.
+     * </p>
+     *
+     * @param connectionFactory Redis 연결 팩토리
+     * @param redisSubscriber   Redis 메시지 리스너(구독자)
+     * @param sensorTopic       구독할 Redis 채널 토픽
+     * @return RedisMessageListenerContainer Redis Pub/Sub 메시지 리스너 컨테이너
+     */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,

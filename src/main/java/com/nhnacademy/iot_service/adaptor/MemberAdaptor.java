@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
+/**
+ * 회원(member-service) 서비스와의 통신을 위한 Feign 클라이언트 어댑터입니다.
+ * <p>
+ * /api/v1/members 경로 하위의 회원 관련 API를 호출합니다.
+ * </p>
+ */
 @FeignClient(
         name = "member-service",
         url = "${member-service.url}",
