@@ -2,6 +2,8 @@ package com.nhnacademy.iot_service.controller;
 
 import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
+import com.nhnacademy.iot_service.dto.sensor.SensorResult;
+import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.service.SensorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ public class SensorController {
      * 센서 비즈니스 로직을 처리하는 서비스입니다.
      */
     private final SensorService sensorService;
+    private final RedisPublisher redisPublisher;
 
     /**
      * 센서를 등록합니다.
@@ -42,6 +45,11 @@ public class SensorController {
 
         return ResponseEntity
                 .ok(response);
+    }
+
+    @PostMapping("/send")
+    public void sendSensorResult(@RequestBody SensorResult result) {
+        redisPublisher.publishSensorData(result);
     }
 
     /**

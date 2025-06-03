@@ -213,6 +213,7 @@ public class SensorServiceImpl implements SensorService {
         ResponseEntity<List<RuleEvaluationResult>> scheduleResults =
                 comfortAdaptor.getScheduledResult();
 
+        log.debug("ScheduledResult : {}", scheduleResults);
         List<RuleEvaluationResult> results = scheduleResults.getBody();
 
         return Map.of(
