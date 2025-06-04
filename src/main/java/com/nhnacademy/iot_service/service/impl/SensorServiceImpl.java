@@ -63,6 +63,11 @@ public class SensorServiceImpl implements SensorService {
 
         if (!role.getRoleName().equals("ROLE_ADMIN")) {
             log.error("권한이 맞지 않습니다.");
+            log.debug("Register sensor 요청 email: {}", email);
+            log.debug("Member API 응답: {}", response);
+            log.debug("Member 응답 바디: {}", response.getBody());
+            log.debug("memberNo: {}", response.getBody().getNo());
+
             throw new AccessDeniedException("관리자 권한이 필요합니다.");
         }
 
@@ -213,7 +218,6 @@ public class SensorServiceImpl implements SensorService {
         ResponseEntity<List<RuleEvaluationResult>> scheduleResults =
                 comfortAdaptor.getScheduledResult();
 
-        log.debug("ScheduledResult : {}", scheduleResults);
         List<RuleEvaluationResult> results = scheduleResults.getBody();
 
         return Map.of(
