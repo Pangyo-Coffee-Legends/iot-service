@@ -45,6 +45,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         MemberThreadLocal.setMemberEmail(email);
+        log.debug("memberThreadLocal register success!");
 
         return true;
     }
