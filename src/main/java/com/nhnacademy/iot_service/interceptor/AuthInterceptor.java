@@ -37,6 +37,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String email = request.getHeader("X-USER");
+        log.debug("X-USER 헤더: {}", email);
 
         if (Objects.isNull(email) || email.isBlank()) {
             log.error("register sensor unauthorized");
