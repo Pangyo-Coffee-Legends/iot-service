@@ -2,10 +2,15 @@ package com.nhnacademy.iot_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.nhnacademy.iot_service.properties.RedisProperties;
 import com.nhnacademy.iot_service.redis.sub.RedisSubscriber;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -17,8 +22,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * Redis 관련 설정을 정의하는 구성 클래스입니다.
  * Redis 연결 팩토리, 템플릿, Pub/Sub 채널 토픽 등을 설정합니다.
  */
+@Slf4j
 @Configuration
+@EnableConfigurationProperties(RedisProperties.class)
 public class RedisConfig {
+
+    private final RedisProperties redisProperties;
+
+    public RedisConfig(RedisProperties redisProperties) {
+        this.redisProperties = redisProperties;
+    }
 
     /**
      * Redis Pub/Sub 채널 토픽을 생성합니다.
@@ -32,17 +45,36 @@ public class RedisConfig {
     }
 
     /**
-     * Redis 연결 팩토리를 생성합니다.
-     * 기본 로컬호스트(127.0.0.1)와 포트(6379)를 사용하여 연결을 설정합니다.
+     * Redis 연결 팩토리 빈을 생성합니다.
+     * <p>
+     * RedisStandaloneConfiguration을 사용하여 Redis 서버의 호스트, 포트, 비밀번호, 데이터베이스를 설정하고,
+     * LettuceConnectionFactory를 반환합니다.
+     * </p>
      *
-     * @return Lettuce 기반 Redis 연결 팩토리
-     * @see LettuceConnectionFactory
+     * @return LettuceConnectionFactory Redis 연결을 관리하는 팩토리 객체
      */
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory();
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisProperties.getHost());
+        config.setPort(redisProperties.getPort());
+        config.setPassword(RedisPassword.of(redisProperties.getPassword()));  // 꼭 RedisPassword.of() 사용
+        config.setDatabase(redisProperties.getDatabase());
+        return new LettuceConnectionFactory(config);
     }
 
+    /**
+     * Redis 메시지 리스너 컨테이너 빈을 생성합니다.
+     * <p>
+     * 주어진 RedisConnectionFactory, RedisSubscriber, ChannelTopic을 사용하여
+     * RedisMessageListenerContainer를 구성하고, 지정된 토픽에 대한 메시지 리스너를 등록합니다.
+     * </p>
+     *
+     * @param connectionFactory Redis 연결 팩토리
+     * @param redisSubscriber   Redis 메시지 리스너(구독자)
+     * @param sensorTopic       구독할 Redis 채널 토픽
+     * @return RedisMessageListenerContainer Redis Pub/Sub 메시지 리스너 컨테이너
+     */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
@@ -68,9 +100,9 @@ public class RedisConfig {
      * @see JavaTimeModule
      */
     @Bean
-    public RedisTemplate<String, Object> redisTemplate() {
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
+        template.setConnectionFactory(connectionFactory);
 
         // Java LocalDateTime Add
         ObjectMapper objectMapper = new ObjectMapper();

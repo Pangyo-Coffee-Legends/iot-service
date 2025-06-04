@@ -10,12 +10,23 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Objects;
 
+/**
+ * 인증 처리를 위한 Spring 인터셉터입니다.
+ * <p>
+ * HTTP 요청 헤더의 "X-USER" 값을 검증하고, ThreadLocal에 회원 이메일을 저장/제거합니다.
+ * </p>
+ */
 @Slf4j
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
     /**
      * 요청 전처리: 인증된 사용자의 멤버 번호를 ThreadLocal에 저장합니다.
+     * <ul>
+     *   <li>"X-USER" 헤더에서 이메일 추출</li>
+     *   <li>헤더가 없거나 빈 값일 경우 403 Forbidden 응답</li>
+     *   <li>유효한 경우 ThreadLocal에 이메일 저장</li>
+     * </ul>
      *
      * @param request  현재 HTTP 요청 객체
      * @param response 현재 HTTP 응답 객체
@@ -26,6 +37,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String email = request.getHeader("X-USER");
+        log.debug("X-USER 헤더: {}", email);
 
         if (Objects.isNull(email) || email.isBlank()) {
             log.error("register sensor unauthorized");
@@ -34,6 +46,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         MemberThreadLocal.setMemberEmail(email);
+        log.debug("memberThreadLocal register success!");
 
         return true;
     }
