@@ -80,4 +80,10 @@ public interface SensorService {
      * @return 동일 위치에 설치된 각 센서의 상태와 평가 결과를 담은 {@link SensorResult} 리스트
      */
     List<SensorResult> getSensorStatusByLocation(Long sensorNo);
+
+    /**
+     * 센서 장소 리스트 조회
+     * @return 센서 장소 리스트 조회
+     */
+    List<String> getAllSensorLocations();
 }

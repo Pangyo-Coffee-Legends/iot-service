@@ -314,6 +314,11 @@ public class SensorServiceImpl implements SensorService {
                 .toList();
     }
 
+    @Override
+    public List<String> getAllSensorLocations() {
+        return sensorRepository.findDistinctLocations();
+    }
+
     private SensorResponse toSensorResponse(Sensor sensor) {
         return new SensorResponse(
                 sensor.getSensorNo(),

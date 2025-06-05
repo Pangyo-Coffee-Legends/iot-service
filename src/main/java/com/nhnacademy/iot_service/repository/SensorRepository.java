@@ -2,6 +2,7 @@ package com.nhnacademy.iot_service.repository;
 
 import com.nhnacademy.iot_service.domain.Sensor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -20,4 +21,11 @@ public interface SensorRepository extends JpaRepository<Sensor, Long> {
      * @return 해당 위치의 센서 리스트
      */
     List<Sensor> findByLocation(String location);
+
+    /**
+     * 센서의 장소들에 대한 정보를 조회합니다.
+     * @return 센서 위치 리스트
+     */
+    @Query("SELECT DISTINCT s.location FROM Sensor s")
+    List<String> findDistinctLocations();
 }

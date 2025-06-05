@@ -66,6 +66,15 @@ public class SensorController {
                 .ok(response);
     }
 
+    @GetMapping("/places")
+    public ResponseEntity<List<String>> getLocations() {
+        List<String> locations = sensorService.getAllSensorLocations();
+
+        log.debug("getLocations : {}", locations);
+
+        return ResponseEntity.ok(locations);
+    }
+
     /**
      * 센서 위치(장소)로 센서 목록을 조회합니다.
      *
