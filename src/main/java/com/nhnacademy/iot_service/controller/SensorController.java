@@ -3,10 +3,12 @@ package com.nhnacademy.iot_service.controller;
 import com.nhnacademy.iot_service.dto.sensor.SensorRegisterRequest;
 import com.nhnacademy.iot_service.dto.sensor.SensorResponse;
 import com.nhnacademy.iot_service.dto.sensor.SensorResult;
+import com.nhnacademy.iot_service.dto.sensor.SensorUpdateRequest;
 import com.nhnacademy.iot_service.redis.pub.RedisPublisher;
 import com.nhnacademy.iot_service.service.SensorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -88,5 +90,23 @@ public class SensorController {
         log.debug("getSensors : {}", responseList);
 
         return ResponseEntity.ok(responseList);
+    }
+
+    @PutMapping("/{sensorNo}")
+    public ResponseEntity<SensorResponse> updateSensor(@PathVariable("sensorNo") Long sensorNo,
+                                                       @RequestBody SensorUpdateRequest request) {
+        SensorResponse response = sensorService.updateSensor(sensorNo, request);
+        log.debug("updateSensor : {}", response);
+
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .body(response);
+    }
+
+    @DeleteMapping("/{sensorNo}")
+    public ResponseEntity<SensorResponse> deleteSensor(@PathVariable("sensorNo") Long sensorNo) {
+        sensorService.deleteSensor(sensorNo);
+        log.debug("deleteSensor : {}", sensorNo);
+        return ResponseEntity.noContent().build();
     }
 }

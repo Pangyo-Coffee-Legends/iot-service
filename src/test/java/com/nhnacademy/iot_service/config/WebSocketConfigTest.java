@@ -29,14 +29,14 @@ class WebSocketConfigTest {
     WebSocketConfig webSocketConfig;
 
     @Test
-    @DisplayName("STOMP 엔드포인트 /ws-sensor 가 등록되고 CORS가 허용된다")
+    @DisplayName("STOMP 엔드포인트 /ws/sensor 가 등록되고 CORS가 허용된다")
     void registerStompEndpoints() {
-        when(stompEndpointRegistry.addEndpoint("/ws-sensor")).thenReturn(stompEndpointRegistration);
+        when(stompEndpointRegistry.addEndpoint("/ws/sensor")).thenReturn(stompEndpointRegistration);
         when(stompEndpointRegistration.setAllowedOriginPatterns("*")).thenReturn(stompEndpointRegistration);
 
         webSocketConfig.registerStompEndpoints(stompEndpointRegistry);
 
-        verify(stompEndpointRegistry).addEndpoint("/ws-sensor");
+        verify(stompEndpointRegistry).addEndpoint("/ws/sensor");
         verify(stompEndpointRegistration).setAllowedOriginPatterns("*");
     }
 
