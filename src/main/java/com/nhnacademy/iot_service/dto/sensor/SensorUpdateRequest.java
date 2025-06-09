@@ -1,6 +1,8 @@
 package com.nhnacademy.iot_service.dto.sensor;
 
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 센서 정보 수정 요청을 위한 DTO입니다.
@@ -8,7 +10,9 @@ import lombok.Value;
  * 센서 이름과 센서 타입 정보를 포함합니다.
  * </p>
  */
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class SensorUpdateRequest {
 
     /**

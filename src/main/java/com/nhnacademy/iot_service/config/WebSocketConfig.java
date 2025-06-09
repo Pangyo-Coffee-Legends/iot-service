@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     /**
      * STOMP WebSocket 엔드포인트를 등록합니다.
      * <p>
-     * 클라이언트는 "/ws-sensor" 엔드포인트를 통해 WebSocket에 연결할 수 있습니다.
+     * 클라이언트는 "/ws/sensor" 엔드포인트를 통해 WebSocket에 연결할 수 있습니다.
      * 모든 도메인에서의 접속을 허용합니다.
      * </p>
      *
@@ -27,7 +27,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws-sensor").setAllowedOriginPatterns("*");
+        registry.addEndpoint("/ws/sensor").setAllowedOriginPatterns("*");
     }
 
     /**

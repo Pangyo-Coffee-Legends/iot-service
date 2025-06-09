@@ -15,3 +15,12 @@ VALUES
     (4, 98),
     (5, 98),
     (6, 98);
+
+INSERT INTO places (place_name, image_path) VALUES
+    ('1층', '/images/floor1.png'),
+    ('회의실A', '/images/meeting_a.png'),
+    ('회의실B', '/images/meeting_b.png'),
+    ('사무실A', '/images/office_a.png'),
+    ('사무실B', '/images/office_b.png'),
+    ('2층', '/images/floor2.png'),
+    ('3층', '/images/floor3.png');
