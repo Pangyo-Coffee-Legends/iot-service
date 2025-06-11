@@ -34,58 +34,12 @@
 - 실시간 데이터는 Redis Pub/Sub, WebSocket으로 처리
 - Spring Cloud/Feign으로 외부 서비스 통합
 
----
-
-## **폴더 구조**
-
-```java
-src/
- ├─ domain/
- │   ├─ Role.java
- │   ├─ Sensor.java
- │   ├─ SensorMemberMapping.java
- │   └─ SensorStatus.java
- ├─ dto/
- │   ├─ ActionDTO.java
- │   ├─ ConditionDTO.java
- │   ├─ RuleEvaluationResultDTO.java
- │   ├─ MemberDTO.java
- │   └─ SensorDTO.java
- ├─ interceptor/
- │   └─ MemberThreadLocal.java
- ├─ redis/
- │   ├─ pub/
- │   └─ sub/
- ├─ repository/
- │   ├─ RoleRepository.java
- │   ├─ SensorMemberMappingRepository.java
- │   └─ SensorRepository.java
- ├─ service/
- │   └─ SensorService.java
- ├─ config/
- │   ├─ FeignClientConfig.java
- │   ├─ RedisConfig.java
- │   ├─ WebMvcConfig.java
- │   └─ WebSocketConfig.java
- ├─ controller/
- │   ├─ SensorController.java
- │   └─ SensorWebSocketController.java
- └─ redisProperties/
-```
 
 ---
+![스크린샷 2025-06-11 오후 5 36 03](https://github.com/user-attachments/assets/fa766558-11bc-49be-8d7a-aa1687e6ea18)
 
+---
 ## **기술 스택**
-
-- Java 21+
-- Spring Boot, Spring Cloud, Spring Data JPA
-- Redis (Pub/Sub)
-- WebSocket
-- Feign (API 통합)
-- MySQL, H2
-- Lombok 등
-
----
 
 ![git](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)
 ![java21](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
