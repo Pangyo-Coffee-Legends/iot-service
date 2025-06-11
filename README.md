@@ -36,9 +36,6 @@
 
 
 ---
-![스크린샷 2025-06-11 오후 5 36 03](https://github.com/user-attachments/assets/fa766558-11bc-49be-8d7a-aa1687e6ea18)
-
----
 ## **기술 스택**
 
 ![git](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)
