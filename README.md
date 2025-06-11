@@ -26,13 +26,8 @@
 
 ## **아키텍처**
 
-```java
-Front → Gateway → Member API → Token API (시작) 
+![image](https://github.com/user-attachments/assets/35a10d14-d512-409f-a42b-e0ee4edd1cf1)
 
-센서 → RuleEngine API → IoT Service (REST/WS) → Redis Pub/Sub → Front
-                                ↓
-                        DB (센서/매핑/상태)
-```
 
 - 센서 데이터는 REST API, WebSocket, Redis Pub/Sub 등 다양한 경로로 수집
 - 서비스 내부에서 도메인, DTO, Repository, Service, Controller로 계층 분리
