@@ -136,6 +136,8 @@ public class SensorServiceImpl implements SensorService {
             throw new SensorNotFoundException(sensorNo);
         }
 
+        mbMappingRepository.deleteBySensor_SensorNo(sensorNo);
+
         sensorRepository.deleteById(sensorNo);
         log.debug("sensor delete success");
     }

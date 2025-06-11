@@ -10,4 +10,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * </p>
  */
 public interface SensorMbMappingRepository extends JpaRepository<SensorMemberMapping, Long> {
+    void deleteBySensor_SensorNo(Long sensorNo);
 }
